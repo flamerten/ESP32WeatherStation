@@ -6,6 +6,12 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
+
+AsyncWebServer server(80);
+
 #include "secrets.h"
 #include "bitmaps.h"
 
@@ -35,6 +41,7 @@ uint8_t west_pixel = 0;
 //Yellow - Fair //White - Cloudy //Light blue - Rain //Dark Blue - Showers
 //Check for these strings in the API recieved
 String Fair = "Fair"; String Cloudy = "Cloudy"; String Rain = "Rain"; String Showers = "Showers";
+String UnknownWeather;
 
 
 //Weather Data Collection
@@ -201,6 +208,9 @@ void LightUpPixel(int pixel_no, int weather, bool animate){
     case 3:
       r = 0; g = 0; b = 200; //blue
       break;
+    case 4:
+      r = 100; g = 0; b = 0; //error -red
+      break;
   }
 
 
@@ -222,7 +232,7 @@ void init_TFT(){
   delay(1000);
   
   display.clearDisplay();
-  display.setTextSize(TEXT_SIZE);
+  //display.setTextSize(TEXT_SIZE);
   display.setTextColor(SSD1306_BLACK);
   display.setCursor(0, 0);
   display.invertDisplay(1);
@@ -242,7 +252,15 @@ void DisplayDefault(){
   display.clearDisplay();
   delay(50);
 
-  display.drawBitmap(0, 0,  WeatherStation, 128, 64, WHITE);
+  if(WeatherData.central[0] == 0){
+    display.setCursor(0, 0);
+    display.setTextSize(TEXT_SIZE - 1);
+   
+    display.println("Unknown!!");
+    display.println("Central:");
+    display.println(UnknownWeather);
+  }
+  else display.drawBitmap(0, 0,  WeatherStation, 128, 64, WHITE);
   
   display.display();  
 }
@@ -250,6 +268,7 @@ void DisplayDefault(){
 void DisplayTemp(){
   display.clearDisplay();
   display.fillScreen(SSD1306_WHITE);
+  display.setTextSize(TEXT_SIZE);
   
   delay(50);
   display.setCursor(0, 0);
@@ -273,7 +292,7 @@ int WeatherToInt(JSONVar item){
   else if (jsonString.indexOf(Showers) > 0) return 3;
   else{
     Serial.println("Unable to find");
-    return 0; //Average
+    return 4;
   }
   
 }
@@ -297,13 +316,18 @@ void UpdateWeatherData(){
 
 
     for(int i = 0; i < 3; i++){ //for diff periods
+      Serial.printf("-----UPDATE WEATHER DATA:%i-----",i);
+      Serial.println();
       WeatherData.west[i]    = WeatherToInt( myObject["items"][0]["periods"][i]["regions"]["west"]    );
       WeatherData.east[i]    = WeatherToInt( myObject["items"][0]["periods"][i]["regions"]["east"]   );
       WeatherData.central[i] = WeatherToInt( myObject["items"][0]["periods"][i]["regions"]["central"] );
       WeatherData.south[i]   = WeatherToInt( myObject["items"][0]["periods"][i]["regions"]["south"]   );
       WeatherData.north[i]   = WeatherToInt( myObject["items"][0]["periods"][i]["regions"]["north"]   );
+      Serial.println("--------------------------------");
     }
 
+    UnknownWeather = myObject["items"][0]["periods"][0]["regions"]["central"]; //To print on TFT if error 
+    Serial.print(UnknownWeather + "\n");
     
    
   }
@@ -343,9 +367,22 @@ void setup() {
     Serial.print(".");
     if(millis() - time_now >= 20000) resetFunc(); //30s
   }
-  Serial.println("");
-  Serial.print("Connected to WiFi network with IP Address: ");
-  Serial.println(WiFi.localIP());
+
+  if(WiFi.status() == WL_CONNECTED){
+    Serial.println("");
+    Serial.print("Connected to ");
+    Serial.println(ssid);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(200, "text/plain", "Hi! I am ESP32.");
+    });
+
+    AsyncElegantOTA.begin(&server);    // Start ElegantOTA
+    server.begin();
+    Serial.println("HTTP server started");
+  }
 
   DisplayDefault();
 
