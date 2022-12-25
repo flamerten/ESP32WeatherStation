@@ -252,15 +252,17 @@ void DisplayDefault(){
   display.clearDisplay();
   delay(50);
 
-  if(WeatherData.central[0] == 0){
+  if(WeatherData.central[0] == 4){
     display.setCursor(0, 0);
-    display.setTextSize(TEXT_SIZE - 1);
+    display.setTextSize(TEXT_SIZE);
    
     display.println("Unknown!!");
     display.println("Central:");
     display.println(UnknownWeather);
   }
-  else display.drawBitmap(0, 0,  WeatherStation, 128, 64, WHITE);
+  else{
+    display.drawBitmap(0, 0,  WeatherStation, 128, 64, WHITE);
+  }
   
   display.display();  
 }
@@ -369,6 +371,7 @@ void setup() {
   }
 
   if(WiFi.status() == WL_CONNECTED){
+    DisplayDefault();
     Serial.println("");
     Serial.print("Connected to ");
     Serial.println(ssid);
@@ -383,8 +386,10 @@ void setup() {
     server.begin();
     Serial.println("HTTP server started");
   }
+  else DisplayNoWifi();
 
-  DisplayDefault();
+
+  delay(1000);
 
 }
 
