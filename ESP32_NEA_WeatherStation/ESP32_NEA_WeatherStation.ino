@@ -233,9 +233,8 @@ void init_TFT(){
   
   display.clearDisplay();
   //display.setTextSize(TEXT_SIZE);
-  display.setTextColor(SSD1306_BLACK);
+  display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.invertDisplay(1);
 }
 
 void DisplayNoWifi(){
@@ -269,10 +268,9 @@ void DisplayDefault(){
 
 void DisplayTemp(){
   display.clearDisplay();
-  display.fillScreen(SSD1306_WHITE);
-  display.setTextSize(TEXT_SIZE);
   
   delay(50);
+
   display.setCursor(0, 0);
 
   display.print(temperature);
